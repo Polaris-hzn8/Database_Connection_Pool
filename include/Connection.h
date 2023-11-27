@@ -8,6 +8,7 @@
 #ifndef _CONNECTION_H
 #define _CONNECTION_H
 
+#include <ctime>
 #include <string.h>
 #include <iostream>
 #include <mysql/mysql.h>
@@ -28,9 +29,15 @@ public:
     bool connect(string ip, unsigned short port, string user, string password, string dbname);
     // 更新数据库操作 insert delete update
     bool update(string sql);
+    // 刷新连接的起始空闲时间点
+    void refreshAliveTime() { _alivetime = clock(); }
+    // 返回连接存活的时长
+    clock_t getAliveTime() const { return clock() - _alivetime; }
 private:
     // 表示和 MYSQL Server的一条连接
     MYSQL *_conn;
+    // 进入空闲状态后的起始时间
+    clock_t _alivetime;
 };
 
 #endif

@@ -24,13 +24,17 @@ class ConnectionPool {
 public:
 	// 获取连接池实例
 	static ConnectionPool* getConnectionPool();
-	// 生产新连接任务函数
-	void produceConnTask();
 	// 获取数据库连接
 	shared_ptr<Connection> getConnection();
 private:
 	ConnectionPool();
+	// 加载外部配置文件
 	bool loadConfigFile();
+	// 生产新连接任务函数
+	void produceConnTask();
+	// 定时扫描空闲连接 并进行回收操作
+	void collectConnTask();
+private:
 	// 连接池参数
 	int _initSize;				// 初始连接量
 	int _maxSize;				// 最大连接量

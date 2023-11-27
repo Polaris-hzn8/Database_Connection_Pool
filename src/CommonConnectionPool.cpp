@@ -30,6 +30,7 @@ void ConnectionPool::produceConnTask()
 		if (_connectionCnt < _maxSize) {
 			Connection *p = new Connection();
 			p->connect(_ip, _port, _username, _password, _dbname);
+			p->refreshAliveTime();
 			_connectionq.push(p);
 			_connectionCnt++;
 		}
@@ -56,6 +57,7 @@ shared_ptr<Connection> ConnectionPool::getConnection()
 	// 返回连接对象 使用智能指针管理
 	shared_ptr<Connection> sp(_connectionq.front(), [&](Connection *pcon){
 		unique_lock<mutex> lock(_queueMutex);
+		pcon->refreshAliveTime();
 		_connectionq.push(pcon);
 	});
 	_connectionq.pop();
@@ -72,11 +74,18 @@ ConnectionPool::ConnectionPool() {
 	for (int i = 0; i < _initSize; ++i) {
 		Connection *p = new Connection();
 		p->connect(_ip, _port, _username, _password, _dbname);
+		p->refreshAliveTime();
 		_connectionq.push(p);
 		_connectionCnt++;
 	}
 	// 3.启动一个新的线程作为连接的生产者
 	thread connProducer(std::bind(&ConnectionPool::produceConnTask, this));
+	// 设置为守护线程
+	connProducer.detach();
+	// 4.启动一个新的线程 定时扫描超过maxIdleTime时间的空闲连接 对空闲连接进行回收操作
+	thread connCollector(std::bind(&ConnectionPool::collectConnTask, this));
+	// 设置为守护线程
+	connCollector.detach();
 }
 
 // 读取配置文件
@@ -122,4 +131,21 @@ bool ConnectionPool::loadConfigFile()
 	return true;
 }
 
+// 定时扫描空闲连接 并进行回收操作
+void ConnectionPool::collectConnTask()
+{
+	for (;;) {
+		// 通过调用sleep模拟定时效果
+		this_thread::sleep_for(chrono::seconds(_maxIdleTime));
+		// 扫描整个连接池队列 释放多余连接
+		unique_lock<mutex> lock(_queueMutex);
+		while (_connectionCnt > _initSize) {
+			Connection *p = _connectionq.front();
+			if (p->getAliveTime() < (_maxIdleTime * 1000)) break;
+			_connectionq.pop();
+			_connectionCnt--;
+			delete p;//调用Connection的析构函数释放连接
+		}
+	}
+}
 
