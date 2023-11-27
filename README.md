@@ -19,7 +19,7 @@
 3. 基于CAS的原子整型、unique_lock（并没有使用操作系统方面的api，基于C++11语言级别具有一定的跨平台特性）、
 4. 智能指针share_ptr、lambda表达式、
 
-### 2.连接池功能点
+### 2.连接池参数
 
 数据库连接池主要参数：
 
@@ -39,12 +39,15 @@
 
 其余连接池的更多功能需要自行扩展实现，本项目不做扩充，
 
-### 3.实现方案
+### 3.连接池功能点
 
 ![image-20231115222156809](assets/image-20231115222156809.png)
 
-- 连接池代码实现：`ConnectionPool.cpp`和`ConnectionPool.h` 
-- 数据库操作代码实现：`Connection.cpp`和`Connection.h` 
+- 连接池操作实现：`ConnectionPool.cpp`和`ConnectionPool.h` 
+
+
+- 数据库CURD操作实现：`Connection.cpp`和`Connection.h` 
+
 
 连接池主要包含了以下功能点：
 
@@ -57,7 +60,41 @@
 4. 用户获取的连接使用share_ptr智能指针来进行管理，用lambda表达式定制连接释放功能（不是将连接真正释放，而是将连接归还到连接池中），
 5. 连接的生产和连接的消费采用生产者-消费者线程模型来设计，使用线程间的同步通信机制：条件变量和互斥锁，
 
+```cpp
+#include <mysql.h>
+#include <string>
+#include "public.h"
+using namespace std;
 
+// 数据库操作类
+class MYSQL{
+public:
+    // 初始化数据库连接
+    MYSQL() {
+        _conn = mysql_init(nullptr);
+    }
+    // 释放数据库连接资源
+    ~MYSQL() {
+        if (_conn != nullptr) mysql_close(_conn);
+    }
+    // 连接数据库
+    bool connect(string ip, unsigned short port, string user, string password, string dbname) {
+        MYSQL *p = mysql_real_connect(_conn, ip.c_str(), user.c_str(), password.c_str(), dbname.c_str(), port, nullptr, 0);
+        return p != nullptr;
+    }
+    // 更新数据库操作 insert delete update
+    bool update(string sql) {
+        if (mysql_query(_conn, sql.c_str())) {
+            LOG("更新失败" + sql);
+            return nullptr;
+        }
+        return mysql_use_result(_conn);
+    }
+private:
+    // 表示和 MYSQL Server的一条连接
+    MYSQL *_conn;
+};
+```
 
 
 
