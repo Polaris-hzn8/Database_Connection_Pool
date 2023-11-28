@@ -1,10 +1,10 @@
 GCC ?= g++
 CCMODE = PROGRAM
 CFLAGS =  -Wall $(MACRO)
-TARGET = CDBCONPOOL
-SRCS := $(wildcard src/*.cpp)
+TARGET = connectionPool
+SRCS := $(wildcard main.cpp src/*.cpp)
 INCLUDES =  -I ./include
-# LIBS = -lpthread -lncurses
+LIBS = -lpthread -lmysqlclient
 
 ifeq ($(CCMODE),PROGRAM)
 $(TARGET): $(LINKS) $(SRCS) 
@@ -14,5 +14,3 @@ $(TARGET): $(LINKS) $(SRCS)
 clean:
 	rm -rf $(TARGET)
 endif
-
-OBJ:=$(TARGET).oss

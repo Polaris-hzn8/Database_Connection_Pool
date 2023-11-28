@@ -26,9 +26,11 @@ public:
     // 释放数据库连接资源
     ~Connection();
     // 连接数据库
-    bool connect(string ip, unsigned short port, string user, string password, string dbname);
+    bool connect(string ip, unsigned int port, string user, string password, string dbname);
     // 更新数据库操作 insert delete update
     bool update(string sql);
+    // 查询数据库操作 query
+    MYSQL_RES* query(string sql);
     // 刷新连接的起始空闲时间点
     void refreshAliveTime() { _alivetime = clock(); }
     // 返回连接存活的时长
